@@ -1,7 +1,7 @@
 Package: spliceSites
 Type: Package
 Title: Manages align gap positions from RNA-seq data
-Version: 0.99.17
+Version: 1.0.0
 Date: 2012-10-28
 Author: Wolfgang Kaisers
 Maintainer: Wolfgang Kaisers <kaisers@med.uni-duesseldorf.de>
