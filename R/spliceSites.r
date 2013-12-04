@@ -7,7 +7,7 @@
 ##  Content   :   Funktionality for working with RNA-seq splice-sites data                      ##
 ##                based von rbamtools and refGenome packages.                                   ##
 ##                for usage in R                                                                ##
-##  Version   :   0.99.7                                                                        ##
+##  Version   :   1.1.1                                                                         ##
 ##                                                                                              ##
 ##  Changelog :                                                                                 ##
 ##  12.11.12  :   Corrected false calculation of gaplen in merge.alignGaps                      ##
@@ -39,6 +39,7 @@
 ##  21.08.13  :   0.99.8  Added functions for hbond score (valgrind tested)                     ##
 ##  23.08.13  :   0.99.9  Submission update for Bioconductor                                    ##
 ##  23.08.13  :   0.99.10 Added get_dna_nmers (valgrind tested)                                 ##
+##  03.12.13  :   1.1.1  Changed annotate.gapSites function                                     ##
 ## ++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++ ##
 
 .onUnload<-function(libpath) { library.dynam.unload("spliceSites",libpath) }
@@ -145,14 +146,6 @@ setMethod("width", "cRanges",function(x)return(x@dt$end-x@dt$start+1L))
 setMethod("getSequence","cdRanges",function(x) return(x@seq))
 setMethod("getSequence","caRanges",function(x) return(x@seq))
 
-
-# setMethod("[","cRanges",function(x,i,j,drop){
-#   cr<-new("cRanges")
-#   cr@dt<-x@dt[i,j]
-#   return(cr)
-# })
-
-# setGeneric("sortTable",      function(x)standardGeneric("sortTable")
 setMethod("sortTable","cRanges",function(x){
   o<-order(x@dt$seqid,x@dt$start,x@dt$end)
   cr<-new(class(x))
@@ -161,9 +154,6 @@ setMethod("sortTable","cRanges",function(x){
     cr@seq<-x@seq[o]
   return(cr)
 })           
-
-
-
 
 # + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + #
 # xCodons functions
@@ -585,7 +575,6 @@ trclv<-function(x,minLen=5,...){
   return(rr)  
 }
 
-# setGeneric("trypsinCleave",   function(x,minLen=5,...)standardGeneric("trypsinCleave"))
 setMethod("trypsinCleave","caRanges",   function(x,minLen=5,...){trclv(x,minLen,...)})
 setMethod("trypsinCleave","aaGapSites",function(x,minLen=5,...){trclv(x,minLen,...)})
 
@@ -789,9 +778,7 @@ setMethod("getProfile","gapSites",function(x)      x@profile)
 # + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + #
 # getLann, getRann
 
-#setGeneric("getLann" ,          function(x)standardGeneric("getLann"))
 setMethod("getLann","gapSites",function(x) return(x@lann))
-#setGeneric("getRann" ,          function(x)standardGeneric("getRann"))
 setMethod("getRann","gapSites",function(x) return(x@rann))
 
 setMethod("sortTable","gapSites",function(x){
@@ -837,10 +824,6 @@ merge.gapSites<-function(x,y,digits=10,...)
                nAligns=nAligns,nAlignGaps=nAlignGaps,nProbes=sm$nProbes)
   return(ga)
 }
-
-
-
-
 
 # + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + #
 #
@@ -1294,7 +1277,6 @@ setMethod("dnaGapSites","gapSites",function(x,dnaset,strand){
   dss<-xscat(lds,rds)
   # Remove unused factor levels
   ans$seqid<-factor(ans$seqid)
-  #ans[,seqid:=ans$seqid[,drop=TRUE]]
   
   # +++++++++++++++++++++++++++++++++++++++++++++++++++++++
   #  strand
@@ -1426,8 +1408,6 @@ do_group_align_data<-function(dt,nAligns,nAlignGaps,startid=1)
   # seqid,lstart,lend,rstart,lend,nAligns
   
   # Do grouping by lend,rstart
-  #sites<-dt[,list(nAligns=length(position),lstart=min(lstart),rend=max(rend)),by=list(seqid,lend,rstart)]
-  
   dtlen<-summaryBy(position~seqid+lend+rstart,dt,FUN=length,keep.names=TRUE)
   dtmin<-summaryBy(lstart~seqid+lend+rstart,dt,FUN=min,keep.names=TRUE)
   dtmax<-summaryBy(rend~seqid+lend+rstart,dt,FUN=max,keep.names=TRUE)  
@@ -1931,9 +1911,26 @@ overlap_genome<-function(qry,ref,verbose=FALSE)
 
 setMethod("annotate","gapSites",function(object,genome)
 {
-  # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #  Preparation of reference
-  ref<-genome@ev$gtf[,c("id","start","end","seqid")]
+  extract<-c("id","start","end","seqid")
+  if(is(genome,"refGenome"))
+  {
+    ref<-genome@ev$gtf[,extract]
+    reftbl<-genome@ev$gtf
+  }
+  else if(is(genome,"data.frame"))
+  {
+    if(any(!is.element(extract,names(genome))))
+      stop("[annotate.gapSites] genome table must contain columns 'id','start','end','seqid'")
+    ref<-genome[,extract]
+    reftbl<-genome
+  }
+  else
+    stop("[annotate.gapSites] genome must be 'refGenome' or 'data.frame'!")
+  
+  ## + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + ##
+  ## Preparation of reference
+  ## + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + ##
+
   mtc<-match(levels(ref$seqid),levels(object@dt$seqid))
   if(any(is.na(mtc)))
     message("[annotate.gapSites] Skipping ",sum(is.na(mtc))," seqid's in genome!") 
@@ -1941,28 +1938,28 @@ setMethod("annotate","gapSites",function(object,genome)
     stop("[annotate.gapSites] No match between gapSites seqid's and genome seqid's (wrong genome?)!")
   l<-list()
     
-  # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #  Annotation of left side (lstart, lend)
+  ## + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + ##
+  ##  Annotation of left side (lstart, lend)
+  ## + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + ##
   message("[annotate.gapSites] Annotating left side.")
-  #qry<-object@dt[,list(as.integer(id),as.integer(lstart),as.integer(lend),seqid)]
   qry<-object@dt[order(object@dt$seqid,object@dt$lstart),c("id","lstart","lend","seqid")]
   names(qry)[2:3]<-c("start","end")
   
   l$left<-overlap_genome(qry,ref)
-  l$left<-merge(l$left,genome@ev$gtf,by.x="refid",by.y="id",all.x=TRUE)
+  l$left<-merge(l$left,reftbl,by.x="refid",by.y="id",all.x=TRUE)
   names(l$left)<-paste("left",names(l$left),sep="_")
   names(l$left)[names(l$left)=="left_queryid"]<-"id"
   l$left<-l$left[order(l$left$id),]
   
-  # +++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++++
-  #  Annotation of right side (rstart,rend)
+  ## + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + ##
+  ##  Annotation of right side (rstart,rend)
+  ## + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + ##
   message("[annotate.gapSites] Annotating right side.")
-  #qry<-object@dt[,list(as.integer(id),as.integer(rstart),as.integer(rend),seqid)]
   qry<-object@dt[order(object@dt$seqid,object@dt$rstart),c("id","rstart","rend","seqid")]
   names(qry)[2:3]<-c("start","end")
   
   l$right<-overlap_genome(qry,ref)
-  l$right<-merge(l$right,genome@ev$gtf,by.x="refid",by.y="id",all.x=TRUE)
+  l$right<-merge(l$right,reftbl,by.x="refid",by.y="id",all.x=TRUE)
   names(l$right)<-paste("right",names(l$right),sep="_")
   names(l$right)[names(l$right)=="right_queryid"]<-"id"
   l$right<-l$right[order(l$right$id),]
@@ -2051,20 +2048,14 @@ setMethod("getAnnStrand","gapSites",function(object)
   # Create data.frame with left annotation strand entries
   leftstrand<-object@lann[,c("id","left_strand")]
   names(leftstrand)[2]<-"lstr"
-  #lstr<-data.frame(id=object@lann$left_queryid,lstr=object@lann$left_strand)
   levels(leftstrand$lstr)<-c(levels(leftstrand$lstr),"*")
   leftstrand$lstr[is.na(leftstrand$lstr)]<-"*"
-  #lstr$lstr[is.na(lstr$lstr)]<-"*"
-  
   
   # Create data.frame with right annotation strand entries
   rightstrand<-object@rann[,c("id","right_strand")]
   names(rightstrand)[2]<-"rstr"
-  #rightstrand<-object@rann[,eval(parse(text="list(id,right_strand)"))]
-  # rstr<-data.frame(id=object@rann$right_queryid,rstr=object@rann$right_strand)
   levels(rightstrand$rstr)<-c(levels(rightstrand$rstr),"*")
   rightstrand$rstr[is.na(rightstrand$rstr)]<-"*"
-  #rstr$rstr[is.na(rstr$rstr)]<-"*"
   # Merge left and right strand info into one data.frame
   dstr<-merge(leftstrand,rightstrand,by="id")
   
@@ -2103,11 +2094,8 @@ setMethod("addGeneAlignPart","gapSites",function(x)
   
   bm<-Sys.localeconv()[7]
   
-  #atb<-merge(x@dt,x@lann[,eval(parse(text="list(id,left_gene_id,left_gene_name)"))],by="id")
-  #atb<-merge(atb,x@rann[,eval(parse(text="list(id,right_gene_id,right_gene_name)"))],by="id")
   atb<-merge(x@dt,x@lann[,c("id","left_gene_id","left_gene_name")],by="id")
   atb<-merge(atb,x@rann[,c("id","right_gene_id","right_gene_name")],by="id")
-  
   
   isna<-is.na(atb$left_gene_id)|is.na(atb$right_gene_id)
   message("[addGeneAlignPart] Skipping ",format(sum(isna),big.mark=bm,width=8)," sites because of missing Gene id.")
@@ -2115,29 +2103,28 @@ setMethod("addGeneAlignPart","gapSites",function(x)
   
   eq<-atb$left_gene_id==atb$right_gene_id
   message("[addGeneAlignPart] Skipping ",format(sum(!eq),big.mark=bm,width=8)," sites because of unequal Gene id.")
-  atb<-atb[eq,]
+  atb<-atb[eq,c("id","nAligns","left_gene_id")]
   
   sal<-tapply(atb$nAligns,atb$left_gene_id,sum)
   tal<-data.frame(gene_aligns=sal,left_gene_id=names(sal))
-  mat<-merge(atb,tal,all.x=TRUE)
-  rhs<-mat[,c("id","gene_aligns")]
   
-  # When routine runs multiple times over same object
-  # existing columns have to be removed
-  # (merge would mess up column names)
-  x@dt$gene_aligns<-NULL
-  x@dt$align_part<-NULL
+  mtc<-match(atb$left_gene_id,tal$left_gene_id)
+  atb$gene_aligns<-tal$gene_aligns[mtc]
+  atb$align_part<-round(atb$nAligns/atb$gene_aligns,4)
   
-  dtb<-merge.data.frame(x@dt,rhs,all.x=TRUE,by="id")
-  dtb$gene_aligns[is.na(dtb$gene_aligns)]
-  dtb$align_part<-dtb$nAligns/dtb$gene_aligns
-  
+  # Create copy of incoming object
   ga<-new("gapSites")
-  ga@dt<-dtb[order(dtb$seqid,dtb$lend,dtb$rstart),]
+  ga@dt<-x@dt
   ga@lann<-x@lann
   ga@rann<-x@rann
   ga@nAligns<-x@nAligns
-  ga@nAlignGaps<-x@nAlignGaps
+  ga@nAlignGaps<-x@nAlignGaps  
+  
+  # Add gene_aligns and align_part column
+  mtc<-match(x@dt$id,atb$id)
+  ga@dt$gene_aligns<-atb$gene_aligns[mtc]
+  ga@dt$align_part<-atb$align_part[mtc]
+
   return(ga)
 })
 
@@ -2441,7 +2428,6 @@ setMethod("addKeyTable","keyProfiler",function(object,keyTable,index,values)
 
 setMethod("getKeyTable","keyProfiler",function(object) {return(object@ev$dtb)})
 
-#setGeneric("appendKeyTable",function(object,keytable,prefix,valFactor,rateFactor,digits)standardGeneric("appendKeyTable"))
 setMethod("appendKeyTable","keyProfiler",function(object,keytable,prefix,valFactor,rateFactor,digits)
 {
   
@@ -2567,9 +2553,6 @@ padd<-function(text,len=5L,char="#",left=TRUE)
   else
     return(sprintf("%s%s)",text,substring(padstring,1,padlen)))
 }
-
-
-
 
 
 # ExpressionSet: featureData
@@ -2781,7 +2764,7 @@ setMethod("uniqueJuncAnn","ExpressionSet",function(object,junc,ann=TRUE,...){
 # + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + #
 # Read Gene FPKM values from cufflinks files into an ExpressionSet
 
-readCuffGeneFpkm<-function(cuff,phenoData)
+readCuffGeneFpkm<-function(cuff,phenoData,summ="max")
 {
   if(!is.character(cuff))
     stop("[readCuffGeneFpkm] must be character!")
@@ -2791,6 +2774,14 @@ readCuffGeneFpkm<-function(cuff,phenoData)
     stop("[readCuffGeneFpkm] phenoData must be AnnotatedDataFrame!")
   if(nrow(pData(phenoData))!=length(cuff))
     stop("[readCuffGeneFpkm] Number of rows in pData(phenoData) must equal length(cuff)!")
+
+  if(summ=="max"){
+    sm<-1
+  }else if(summ=="sum"){
+    sm<-2
+  }else{
+    stop("[readCuffGeneFpkm] summ must be 'max' or 'sum'!")    
+  }
   
   # + + + + + + + + + + + + + + + + + + + + + + + + + + + + #
   # Read count data from bam-files
@@ -2803,13 +2794,20 @@ readCuffGeneFpkm<-function(cuff,phenoData)
   tbl<-read.table(cuff[1],sep="\t",header=TRUE)
   #colnames<-c("tracking_id","gene_short_name","locus","FPKM")
   
+  # A handful of tracking id's occur up to four times
+  # (because of different transcripts)
+  # The one with the maximal FPKM is chosen
   track<-unique(tbl$tracking_id)
   mtc<-match(track,tbl$tracking_id)
   gene<-tbl$gene_short_name[mtc]
   locus<-tbl$locus[mtc]
   res<-data.frame(tracking_id=track,gene=gene,locus=locus)
   
-  fpkm<-tapply(tbl$FPKM,tbl$tracking_id,max)
+  if(sm==1){
+    fpkm<-tapply(tbl$FPKM,tbl$tracking_id,max)
+  }else if(sm==2){
+    fpkm<-tapply(tbl$FPKM,tbl$tracking_id,sum)
+  }
   mtc<-match(res$tracking_id,names(fpkm))
   res[,probes[1]]<-fpkm[mtc]
   
@@ -2819,7 +2817,13 @@ readCuffGeneFpkm<-function(cuff,phenoData)
     # Subsequent cuff-file
     message("[",format(i,width=2),"/",n,"]\tprobe: ",probes[i])
     tbl<-read.table(cuff[i],sep="\t",header=TRUE)
-    fpkm<-tapply(tbl$FPKM,tbl$tracking_id,max)    
+    
+    if(sm==1){
+      fpkm<-tapply(tbl$FPKM,tbl$tracking_id,max)
+    }else if(sm==2){
+      fpkm<-tapply(tbl$FPKM,tbl$tracking_id,sum)
+    }  
+    
     mtc<-match(names(fpkm),res$tracking_id)
     res[,probes[i]]<-0L
     res[,probes[i]][mtc]<-fpkm
@@ -2963,7 +2967,6 @@ setMethod("scoreSeq5","maxEnt",function(x,seq,frame){
   return(.Call("maxent_seq_score5",seq,as.integer(frame),x@ev$me2x5,PACKAGE="spliceSites"))
 })
 
-#setGeneric("scoreSeq3",function(x,seq,frame,which="ent",...)standardGeneric("scoreSeq3"))
 setMethod("scoreSeq3","maxEnt",function(x,seq,frame,which="ent",...){
   if(!is.character(seq))
     stop("[scoreSeq3.maxEnt] seq must be character!")
@@ -2986,7 +2989,6 @@ setMethod("scoreSeq3","maxEnt",function(x,seq,frame,which="ent",...){
     return(.Call("maxent_seq_score3",seq,as.integer(frame),x@ev$emm,PACKAGE="spliceSites"))
 })
 
-# setGeneric("score3",function(x,seq,pos,which="ent",...)standardGeneric("cscore3"))
 setMethod("score3","maxEnt",function(x,seq,pos,which="ent",...){
   if(!is.numeric(pos))
     stop("[score3.maxEnt] pos must be numeric!")
@@ -3099,7 +3101,7 @@ setMethod("getMeStrand","gapSites",function(x){
 
 
 # + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + #
-#  hbond                                                                                           #
+#  hbond                                                                                            #
 #  Calculates splice site scores                                                                    #
 #                                                                                                   #
 # + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + + #
@@ -3118,9 +3120,7 @@ load.hbond<-function(file)
 }
 
 # Generics from refGenome
-#setGeneric("basedir",function(object)standardGeneric("basedir"))
 setMethod("basedir","hbond",function(object) {return(object@basedir)})
-#setGeneric("basedir<-",function(object,value)standardGeneric("basedir<-"))
 setReplaceMethod("basedir","hbond",function(object,value)
 {
   if(!file.exists(value))
@@ -3129,7 +3129,6 @@ setReplaceMethod("basedir","hbond",function(object,value)
   return(object)
 })
 
-# setGeneric("hbond",function(x,seq,pos,...)standardGeneric("hbond"))
 setMethod("hbond","hbond",function(x,seq,pos,...){
   if(!is.numeric(pos))
     stop("[hbond.hbond] pos must be numeric!")
@@ -3221,3 +3220,4 @@ juncplot<-function()
   text(1:n,1,LETTERS[1:n])
   par(op)
 }
+
