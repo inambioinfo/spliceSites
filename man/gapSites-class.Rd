@@ -74,7 +74,7 @@
 %
 \alias{write.annDNA.tables}
 \alias{write.annDNA.tables-methods}
-\alias{write.annDNA.tables,gapSites-method}
+\alias{write.annDNA.tables,gapSites,DNAStringSet,character-method}
 %
 \title{Class \code{"gapSites"}: Container for tabulated alignment gap
 positions on RNA-seq data.}

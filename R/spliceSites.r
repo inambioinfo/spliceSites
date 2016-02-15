@@ -46,6 +46,8 @@
 ##  23.08.13  : 0.99.10 Added get_dna_nmers (valgrind tested)                ##
 ##  03.12.13  : 1.1.1  Changed annotate.gapSites function                    ##
 ##  29.01.14  : 1.1.3  Added NA handling for Strings in maxent and hbond     ##
+##  11.11.14  : 1.3.3  Changed annotation procedure to overlapJuncs          ##
+##  27.11.15  : 1.11.0 Submitted update to BioC-devel via svn                ##
 ## - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ##
 
 .onUnload <- function(libpath) { library.dynam.unload("spliceSites", libpath) }
@@ -304,15 +306,23 @@ setMethod("rCodons", "cRanges", function(x, frame=1, keepStrand=TRUE){
 ## Result is position sorted
 ## - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ##
 
-setMethod("dnaRanges", "cRanges", function(x, dnaset, useStrand=TRUE, 
-                                    removeUnknownStrand=TRUE, verbose=TRUE, ...)
+setMethod("dnaRanges", 
+          c("cRanges", "DNAStringSet", "missing"),
+            function(x, dnaset)
+              dnaRanges(x, dnaset, useStrand=TRUE, 
+                        removeUnknownStrand=TRUE, verbose=TRUE))
+
+setMethod("dnaRanges", 
+                c("cRanges", "DNAStringSet", "logical"),
+                function(x, dnaset, useStrand=TRUE, 
+                        removeUnknownStrand=TRUE, verbose=TRUE, ...)
 {
     
-    if(!is(dnaset, "DNAStringSet"))
-        stop("dnaset must be DNAStringSet!")
-    
-    if(!is.logical(useStrand))
-        stop("useStrand must be logical!")
+#     if(!is(dnaset, "DNAStringSet"))
+#         stop("dnaset must be DNAStringSet!")
+#     
+#     if(!is.logical(useStrand))
+#         stop("useStrand must be logical!")
     
     dnames <- names(dnaset)
     
@@ -321,7 +331,7 @@ setMethod("dnaRanges", "cRanges", function(x, dnaset, useStrand=TRUE,
     
     bm <- Sys.localeconv()[7]
     
-    if(removeUnknownStrand && useStrand)
+    if(removeUnknownStrand && useStrand[1])
     {
         lstr <- x@dt$strand != "*"
         nlstr <- sum(lstr)
@@ -2789,18 +2799,19 @@ getDataFrame <- function(x) {return(x@dt)}
 ## - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ##
 
 
-setMethod("write.annDNA.tables", "gapSites",
-    function(object, dnaset, filename, featlen=3, gaplen=8,
-             sep=";", dec=",", row.names=FALSE)
+setMethod("write.annDNA.tables", 
+            c("gapSites", "DNAStringSet", "character") ,
+            function(object, dnaset, filename, featlen=3, gaplen=8,
+                sep=";", dec=",", row.names=FALSE)
 {
-    if(!is(dnaset, "DNAStringSet"))
-        stop("dnaset must be 'DNAStringSet'!")
+#     if(!is(dnaset, "DNAStringSet"))
+#         stop("dnaset must be 'DNAStringSet'!")
     
     if(is.null(object@annotation))
         stop("No annotation table available! Use 'annotation<- '!")
     
-    if(!is.character(filename))
-        stop("filename must be 'character'!")
+#     if(!is.character(filename))
+#         stop("filename must be 'character'!")
     
     dt <- annotation(object)@dt
     dt <- dt[order(dt$id), ]
@@ -3372,7 +3383,7 @@ setMethod("uniqueJuncAnn", c("ExpressionSet", "refJunctions"),
     ## - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ##
     message("[uniqueJuncAnn.ExpressionSet] Merge with annotation.")
     
-    mrg <- merge(fd, uj[, c("seqid", "lend", "rstart", "id", "gene_id", 
+    mrg <- merge(fd, uj@ev$gtf[, c("seqid", "lend", "rstart", "id", "gene_id", 
                                 "strand", "fexid")], 
                         by=c("seqid", "lend", "rstart"), all.x=TRUE)
     
@@ -3972,6 +3983,9 @@ setMethod("addHbond", "gapSites", function(x, dna)
     featlen <- 3  ## nr of exonic   nucleotides
     gaplen <- 8   ## nr of intronic nucleotides
     
+    ## - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ##
+    ## Create output object
+    ## - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - - ##
     res <- new("gapSites")
     res@dt <- x@dt
     res@nAligns <- x@nAligns

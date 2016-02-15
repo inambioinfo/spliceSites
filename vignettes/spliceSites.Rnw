@@ -678,7 +678,7 @@ jtry<-sortTable(jtry)
 Write functions provide functionality for exporting generated tables into
 '.csv' files.
 
-\paragraph{write.annDNA.tables} writes content of \rcl{gapSites} objects
+\subsubsection{write.annDNA.tables} writes content of \rcl{gapSites} objects
 together with DNA-sequence segments.
 
 <<eval=FALSE>>=
@@ -687,7 +687,51 @@ write.annDNA.tables(rtbg, dna_small, "gapSites.csv", featlen=3, gaplen=8)
 @
 
 
-\paragraph{write.files} works on \rcl{caRanges} objects and produces two
+Additional columns output are added by \rcl{write.annDNA.tables} to the
+existing tables in \rcl{gapSites} objects (shown in Table ~\ref{tbl:wrAnTbl}).
+\begin{table}[ht]
+  \centering
+    \caption{Additional columns by write.annDNA.tables}
+    \label{tbl:wrAnTbl}
+    \begin{tabular}{ll}
+      Column & Content\\
+    \hline
+      leftseq   & Sequence of Exon-Intron boundary on left side \\
+      rightseq  & Sequence of Exon-Intron boundary on right side\\
+    \hline
+    \end{tabular}
+\end{table}
+
+The Sequences are obtained using the \rcl{dnaRanges} function called with
+parameters given in table~\ref{tbl:dnaRaArg}. DNA sequences are
+\textit{reverseComplement}ed for '-'-Strand.
+\begin{table}[ht]
+  \centering
+    \caption{Arguments passed to dnaRanges}
+    \label{tbl:dnaRaArg}
+    \begin{tabular}{ll}
+      Class & Content\\
+    \hline
+        cRanges             & lJuncStrand (rJuncStrand) using\\
+                            & featlen and gaplen arguments\\
+        dnaset              & DNAStringSet (Reference sequence)\\
+        useStrand           & TRUE\\
+        removeUnknownStrand & FALSE\\
+    \hline
+    \end{tabular}
+\end{table}
+
+\paragraph{Note} the output of \rfc{write.annDNA.tables}:\\
+The sequence from which the \rfc{lhbond} is calculated will only 
+coincide with the \rfc{leftseq} column in rows with strand='+'.
+The sequence from which the \rcl{rhbond} is calculated  will only
+coincide with the \rfc{rightseq} column in rows with strand='-'.
+Otherwise the Hbond is calculated from the \textit{reverseComplement}'ed 
+sequence.
+
+
+\subsubsection{write.files}
+The \rcl{write.files} function works on \rcl{caRanges} objects and produces two
 output files: One '.csv' file which contains a copy of the data and a '.fa' 
 file which contains sequence in fasta format.
 <<eval=FALSE>>=
@@ -803,6 +847,37 @@ lj<-lJunc(ga, featlen=3, gaplen=8, strand='+')
 ljd<-dnaRanges(lj,dna_small)
 ljdh<-addHbond(ljd)
 @
+
+
+The \rcl{addHbond} function algorithm is made up of three steps
+(left side shown, right side analog):
+
+\begin{itemize}
+    \item Call to \rfc{lJunc} using parameters featlen=3, gaplen=8 and
+        strand='+'.
+    \item Call to \rfc{dnaRanges} function with useStrand=TRUE
+    \item C-call to \rfc{hbond\_score}.
+\end{itemize}
+
+Because the Hbond score is only valid for the splice donor (5' junction)
+site and the \rfc{addHbond} function always assumes '+'-strand on the 
+left gap-site border and '-'-strand on the right gap-site border.
+Therefore the DNA sequence is always passed \textit{as is} on the left
+side and \textit{reverseComplement}'ed on the right side irrespective
+of strand value in the given gap-sites object.\\
+\\
+The Hbond score is 0 when no 'GT' is present in the first two
+intron positions. Usually, \rfc{lhbond} >0 and \rfc{rhbond} =0 when strand='+'
+and \rfc{lhbond}=0 and \rfc{hbond}>0 when strand='-'.\\
+\\
+\paragraph{Note} the output of \rfc{write.annDNA.tables}:\\
+The sequence from which the \rfc{lhbond} is calculated will only 
+coincide with the \rfc{leftseq} column in rows with strand='+'.
+The sequence from which the \rcl{rhbond} is calculated  will only
+coincide with the \rfc{rightseq} column in rows with strand='-'.
+Otherwise the Hbond is calculated from the \textit{reverseComplement}'ed 
+sequence.
+
 
 
 \subsection{Creating ExpressionSet objects containing gap-site align-count 

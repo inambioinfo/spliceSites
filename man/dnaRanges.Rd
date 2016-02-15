@@ -1,7 +1,9 @@
 \name{dnaRanges}
 \alias{dnaRanges}
 \alias{dnaRanges-methods}
-\alias{dnaRanges,cRanges-method}
+%\alias{dnaRanges,cRanges-method}
+\alias{dnaRanges,cRanges,DNAStringSet,missing-method}
+\alias{dnaRanges,cRanges,DNAStringSet,logical-method}
 \title{Reads a bamRange object for a given \code{bamReader}, \code{refGenome} and gene name.}
 \description{Locates gene in genome via \code{refGenome} and reads a \code{bamRange} from the determined region.}
 \usage{
