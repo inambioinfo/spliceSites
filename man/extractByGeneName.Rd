@@ -2,7 +2,9 @@
 \alias{extractByGeneName}
 \alias{extractByGeneName-methods}
 \alias{extractByGeneName,cRanges-method}
+\alias{extractByGeneName,cRanges,ANY-method}
 \alias{extractByGeneName,gapSites-method}
+\alias{extractByGeneName,gapSites,ANY-method}
 \title{extractByGeneName: Extract subset for sites which lie in range(s) defined by given gene list.}
 \description{The function takes a 'cRanges' object (or derived) and searches inside of given 'refGenome' object for gene names. From identified gene-name matches genomic target regions can be defined for wich in turn the contained sites are extracted.}
 \usage{

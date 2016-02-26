@@ -1,3 +1,13 @@
+CHANGES IN VERSION 1.15.0
+-------------------------
+
+    o Changed signature for functions dnaRanges and write.annDNA
+    o Added further explanations for calculations on HBond in vignette
+
+BUG FIXES
+
+    o (none)
+
 CHANGES IN VERSION 1.13.0
 -------------------------
 
