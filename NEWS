@@ -1,0 +1,60 @@
+CHANGES IN VERSION 1.15.0
+-------------------------
+
+    o Changed signature for functions dnaRanges and write.annDNA
+    o Added further explanations for calculations on HBond in vignette
+
+BUG FIXES
+
+    o (none)
+
+CHANGES IN VERSION 1.13.0
+-------------------------
+
+    o Submission to BioC-devel via svn.
+
+BUG FIXES
+
+    o Removed usage of [ngerman]{babel} package in vignette.
+
+
+CHANGES IN VERSION 1.11.0
+-------------------------
+
+    o Submission to BioC-devel via svn.
+
+
+CHANGES IN VERSION 1.3.3
+-------------------------
+
+NEW FEATURES
+
+    o (none)
+
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o Changed annotation procedure. Annotation now uses overlapJuncs.
+
+BUG FIXES
+
+    o (none)
+
+
+CHANGES IN VERSION 1.3.2
+-------------------------
+
+NEW FEATURES
+
+    o Included this NEWS file and a ChangeLog file
+
+    o Added test directory (tests are executed on R CMD check)
+
+
+SIGNIFICANT USER-VISIBLE CHANGES
+
+    o 
+
+BUG FIXES
+
+    o (none)
